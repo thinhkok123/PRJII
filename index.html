@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ Thống Quản Lý Trung Tâm Ngoại Ngữ</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        // --- MOCK DATA ---
+        const INITIAL_CLASSES = [
+            { id: 'OFF001', name: 'IELTS Breakthrough', type: 'Offline', level: 'B2', price: '5,000,000', students: 18, max: 30, min: 20, room: 'Phòng 302', schedule: 'T2-T4-T6 (18:00)' },
+            { id: 'OFF002', name: 'TOEIC Mastery', type: 'Offline', level: 'B1', price: '3,500,000', students: 31, max: 30, min: 20, room: 'Phòng 101', schedule: 'T3-T5-T7 (19:30)' },
+            { id: 'ONL001', name: 'Business English Online', type: 'Online', level: 'C1', price: '4,000,000', students: 12, max: 20, min: 10, room: 'Zoom ID: 888...', schedule: 'T7-CN (09:00)' },
+            { id: 'ONL002', name: 'Giao tiếp Cơ bản', type: 'Online', level: 'A2', price: '2,500,000', students: 8, max: 20, min: 10, room: 'Google Meet', schedule: 'T3-T5 (20:00)' },
+        ];
+
+        const INITIAL_STUDENTS = [
+            { id: 'HV001', name: 'Nguyễn Văn A', classId: 'OFF001', levelResult: 'B2', paid: true, email: 'vana@gmail.com', phone: '0901234567' },
+            { id: 'HV002', name: 'Trần Thị B', classId: 'ONL001', levelResult: 'C1', paid: true, email: 'thib@gmail.com', phone: '0907654321' },
+            { id: 'HV003', name: 'Lê Văn C', classId: 'OFF002', levelResult: 'B1', paid: true, email: 'vanc@gmail.com', phone: '0901122334' },
+        ];
+
+        // --- COMPONENTS ---
+
+        const Icon = ({ name, size = 18, className = "" }) => {
+            useEffect(() => {
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [name, size, className]);
+            return <i data-lucide={name} className={className} style={{ width: size, height: size }}></i>;
+        };
+
+        function App() {
+            const [view, setView] = useState('home');
+            const [user, setUser] = useState(null); // { role: 'admin'|'student', data: object }
+            const [classes] = useState(INITIAL_CLASSES);
+            const [students, setStudents] = useState(INITIAL_STUDENTS);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [messages, setMessages] = useState([
+                { id: 1, sender: 'Tư vấn viên', text: 'Chào bạn! Tôi có thể giúp gì cho bạn về các khóa học luyện thi quốc tế?', time: '09:00' }
+            ]);
+
+            const handleLogin = (u, p) => {
+                // Admin login
+                if (u === 'admin' && p === '1') {
+                    setUser({ role: 'admin', data: { name: 'Quản trị viên' } });
+                    setView('admin');
+                    return true;
+                }
+                // Student login
+                const student = students.find(s => s.id === u && p === '1');
+                if (student) {
+                    setUser({ role: 'student', data: student });
+                    setView('student-info');
+                    return true;
+                }
+                return false;
+            };
+
+            const handleLogout = () => {
+                setUser(null);
+                setView('home');
+            };
+
+            const filteredStudents = useMemo(() => {
+                return students.filter(s => 
+                    s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    s.id.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            }, [students, searchQuery]);
+
+            return (
+                <div className="min-h-screen">
+                    {/* Navigation */}
+                    <nav className="bg-white border-b sticky top-0 z-50 shadow-sm px-4 h-16 flex items-center justify-between">
+                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
+                            <div className="bg-blue-600 p-2 rounded-lg text-white">
+                                <Icon name="book-open" />
+                            </div>
+                            <span className="text-xl font-bold text-blue-600">GlobalEdu</span>
+                        </div>
+                        <div className="flex gap-4 items-center">
+                            <button onClick={() => setView('home')} className={`text-sm font-medium ${view === 'home' ? 'text-blue-600' : 'text-slate-600'}`}>Trang chủ</button>
+                            <button onClick={() => setView('registration')} className={`text-sm font-medium ${view === 'registration' ? 'text-blue-600' : 'text-slate-600'}`}>Đăng ký</button>
+                            <button onClick={() => setView('lookup')} className={`text-sm font-medium ${view === 'lookup' ? 'text-blue-600' : 'text-slate-600'}`}>Tra cứu</button>
+                            <button onClick={() => setView('chat')} className={`text-sm font-medium ${view === 'chat' ? 'text-blue-600' : 'text-slate-600'}`}>Tư vấn</button>
+                            <div className="w-px h-6 bg-slate-200 mx-2"></div>
+                            
+                            {user ? (
+                                <div className="flex items-center gap-4">
+                                    {user.role === 'admin' ? (
+                                        <button onClick={() => setView('admin')} className={`text-sm font-bold ${view === 'admin' ? 'text-blue-600' : 'text-slate-900'}`}>Quản lý</button>
+                                    ) : (
+                                        <button onClick={() => setView('student-info')} className={`text-sm font-bold ${view === 'student-info' ? 'text-blue-600' : 'text-slate-900'}`}>Cá nhân</button>
+                                    )}
+                                    <button onClick={handleLogout} className="text-slate-500 text-sm flex items-center gap-1"><Icon name="log-out" size={14}/> Thoát</button>
+                                </div>
+                            ) : (
+                                <button onClick={() => setView('login')} className="flex items-center gap-1 text-sm text-slate-600 font-semibold bg-slate-100 px-3 py-1.5 rounded-full hover:bg-slate-200 transition-colors">
+                                    <Icon name="user" size={14}/> Đăng nhập
+                                </button>
+                            )}
+                        </div>
+                    </nav>
+
+                    <main className="max-w-7xl mx-auto p-6">
+                        {view === 'home' && <HomeView setView={setView} classes={classes} />}
+                        {view === 'registration' && <RegistrationView classes={classes} setView={setView} />}
+                        {view === 'lookup' && <LookupView students={filteredStudents} searchQuery={searchQuery} setSearchQuery={setSearchQuery} classes={classes} />}
+                        {view === 'chat' && <ChatView messages={messages} setMessages={setMessages} />}
+                        {view === 'login' && <LoginView onLogin={handleLogin} />}
+                        {view === 'admin' && user?.role === 'admin' && <AdminDashboard classes={classes} students={students} />}
+                        {view === 'student-info' && user?.role === 'student' && <StudentDashboard student={user.data} classes={classes} />}
+                    </main>
+                </div>
+            );
+        }
+
+        function HomeView({ setView, classes }) {
+            return (
+                <div className="space-y-10">
+                    <div className="bg-blue-600 rounded-3xl p-10 text-white flex flex-col items-start gap-4">
+                        <h1 className="text-4xl font-extrabold">Hệ Thống Luyện Thi Quốc Gia & Quốc Tế</h1>
+                        <p className="opacity-90 max-w-xl">Cung cấp các lộ trình học tối ưu cho IELTS, TOEIC và chuẩn khung năng lực ngoại ngữ quốc gia.</p>
+                        <div className="flex gap-4">
+                            <button onClick={() => setView('registration')} className="bg-white text-blue-600 px-6 py-3 rounded-full font-bold shadow-lg hover:bg-slate-50 transition-colors">Bắt đầu ngay</button>
+                            <button onClick={() => setView('login')} className="bg-blue-500 border border-blue-400 text-white px-6 py-3 rounded-full font-bold hover:bg-blue-400 transition-colors">Đăng nhập HV</button>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {classes.map(c => (
+                            <div key={c.id} className="bg-white p-6 rounded-2xl border shadow-sm hover:shadow-md transition-all">
+                                <div className="flex justify-between mb-4">
+                                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${c.type === 'Offline' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>{c.type}</span>
+                                    <span className="text-slate-400 text-xs">{c.id}</span>
+                                </div>
+                                <h3 className="text-lg font-bold mb-2">{c.name}</h3>
+                                <p className="text-sm text-slate-500 mb-4 flex items-center gap-2"><Icon name="clock" size={14}/> {c.schedule}</p>
+                                <div className="flex justify-between items-center border-t pt-4">
+                                    <span className="font-bold text-blue-600">{c.price}đ</span>
+                                    <button onClick={() => setView('registration')} className="text-sm font-semibold hover:underline">Chi tiết</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        function RegistrationView({ classes, setView }) {
+            return (
+                <div className="max-w-lg mx-auto bg-white p-8 rounded-2xl border shadow-lg">
+                    <h2 className="text-2xl font-bold mb-6 text-center text-slate-800">Đăng Ký Khóa Học</h2>
+                    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); alert('Đăng ký thành công! Hãy dùng Mã HV dự kiến để đăng nhập sau khi văn phòng duyệt.'); setView('home'); }}>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold text-slate-600">Họ và tên</label>
+                            <input className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="VD: Nguyễn Văn A" required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold text-slate-600">Số điện thoại</label>
+                            <input className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="09xxxxxxx" required />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-sm font-semibold text-slate-600">Lớp mong muốn</label>
+                            <select className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" required>
+                                <option value="">-- Chọn khóa học --</option>
+                                {classes.map(c => <option key={c.id} value={c.id}>{c.name} ({c.type})</option>)}
+                            </select>
+                        </div>
+                        <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-blue-200 shadow-lg hover:bg-blue-700 transition-colors mt-4">Gửi Đăng Ký</button>
+                    </form>
+                </div>
+            );
+        }
+
+        function LookupView({ students, searchQuery, setSearchQuery, classes }) {
+            return (
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-slate-800">Tra cứu công khai</h2>
+                        <div className="relative">
+                            <Icon name="search" size={16} className="absolute left-3 top-3 text-slate-400" />
+                            <input 
+                                className="border p-2 pl-10 rounded-lg w-64 focus:ring-2 focus:ring-blue-500 outline-none" 
+                                placeholder="Tìm theo Tên hoặc Mã HV..." 
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+                        <table className="w-full">
+                            <thead className="bg-slate-50 border-b">
+                                <tr className="text-left text-xs text-slate-500 font-bold uppercase tracking-wider">
+                                    <th className="p-4">Mã HV</th>
+                                    <th className="p-4">Họ Tên</th>
+                                    <th className="p-4">Lớp</th>
+                                    <th className="p-4">Học phí</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {students.map(s => (
+                                    <tr key={s.id} className="border-b text-sm hover:bg-slate-50">
+                                        <td className="p-4 font-mono text-blue-600 font-bold">{s.id}</td>
+                                        <td className="p-4 font-semibold text-slate-700">{s.name}</td>
+                                        <td className="p-4">{classes.find(c => c.id === s.classId)?.name || 'Chờ xếp lớp'}</td>
+                                        <td className="p-4">
+                                            {s.paid ? 
+                                                <span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full font-bold text-[10px]">ĐÃ ĐÓNG</span> : 
+                                                <span className="text-amber-600 bg-amber-50 px-2 py-1 rounded-full font-bold text-[10px]">CHƯA ĐÓNG</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        function ChatView({ messages, setMessages }) {
+            const [txt, setTxt] = useState('');
+            const send = () => {
+                if(!txt.trim()) return;
+                const m = { id: Date.now(), sender: 'Học viên', text: txt, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+                setMessages([...messages, m]);
+                setTxt('');
+            };
+            return (
+                <div className="max-w-2xl mx-auto h-[550px] flex flex-col bg-white border rounded-2xl overflow-hidden shadow-2xl">
+                    <div className="bg-slate-900 text-white p-4 font-bold flex gap-2 items-center">
+                        <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+                        Phòng tư vấn trực tuyến
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50">
+                        {messages.map(m => (
+                            <div key={m.id} className={`flex ${m.sender === 'Học viên' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`p-3 rounded-2xl max-w-[80%] shadow-sm ${m.sender === 'Học viên' ? 'bg-blue-600 text-white rounded-tr-none' : 'bg-white border rounded-tl-none text-slate-700'}`}>
+                                    <p className="text-[10px] font-bold opacity-70 mb-1">{m.sender}</p>
+                                    <p className="text-sm">{m.text}</p>
+                                    <p className="text-[9px] text-right mt-1 opacity-50">{m.time}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-4 border-t flex gap-2 bg-white">
+                        <input className="flex-1 border p-2 rounded-full px-4 outline-none focus:ring-2 focus:ring-blue-500" placeholder="Nhập tin nhắn..." value={txt} onChange={e => setTxt(e.target.value)} onKeyPress={e => e.key === 'Enter' && send()}/>
+                        <button onClick={send} className="bg-blue-600 text-white p-2 rounded-full w-10 h-10 flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100"><Icon name="send" size={16}/></button>
+                    </div>
+                </div>
+            );
+        }
+
+        function LoginView({ onLogin }) {
+            const [u, setU] = useState('');
+            const [p, setP] = useState('');
+            const [tab, setTab] = useState('student'); // 'student' or 'admin'
+
+            return (
+                <div className="max-w-md mx-auto mt-16 bg-white rounded-3xl border shadow-2xl overflow-hidden">
+                    <div className="bg-slate-900 p-8 text-white text-center">
+                        <div className="w-16 h-16 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20 rotate-3">
+                            <Icon name="shield-check" size={32} />
+                        </div>
+                        <h2 className="text-2xl font-bold">Chào mừng trở lại</h2>
+                        <p className="text-slate-400 text-sm mt-1">Hệ thống quản lý trung tâm ngoại ngữ</p>
+                    </div>
+
+                    <div className="flex border-b">
+                        <button onClick={() => setTab('student')} className={`flex-1 py-4 text-sm font-bold transition-colors ${tab === 'student' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'}`}>Học viên</button>
+                        <button onClick={() => setTab('admin')} className={`flex-1 py-4 text-sm font-bold transition-colors ${tab === 'admin' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-slate-400'}`}>Nhân viên</button>
+                    </div>
+
+                    <div className="p-8">
+                        <form className="space-y-4" onSubmit={e => {e.preventDefault(); if(!onLogin(u,p)) alert('Thông tin đăng nhập không chính xác!')}}>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">{tab === 'student' ? 'Mã học viên' : 'Tên đăng nhập'}</label>
+                                <div className="relative">
+                                    <Icon name="user" size={16} className="absolute left-3 top-3.5 text-slate-400" />
+                                    <input className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder={tab === 'student' ? 'VD: HV001' : 'admin'} value={u} onChange={e => setU(e.target.value)} required />
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500 uppercase">Mật khẩu</label>
+                                <div className="relative">
+                                    <Icon name="key" size={16} className="absolute left-3 top-3.5 text-slate-400" />
+                                    <input type="password" className="w-full pl-10 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nhập 1" value={p} onChange={e => setP(e.target.value)} required />
+                                </div>
+                            </div>
+                            <button className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-colors mt-2">
+                                Đăng nhập ngay
+                            </button>
+                        </form>
+                        <div className="mt-6 text-center text-xs text-slate-400">
+                            {tab === 'student' ? 'Quên mật khẩu? Vui lòng liên hệ văn phòng trung tâm.' : 'Chỉ dành cho cán bộ quản lý hệ thống.'}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function AdminDashboard({ classes, students }) {
+            return (
+                <div className="space-y-6 animate-in fade-in duration-500">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-slate-800">Quản lý Trung tâm</h2>
+                        <div className="text-xs font-bold text-slate-500 bg-white border px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">Bảng điều khiển</div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <StatCard label="Tổng Học viên" value={students.length} icon="users" color="blue" />
+                        <StatCard label="Lớp học" value={classes.length} icon="book" color="indigo" />
+                        <StatCard label="Lớp Offline" value={classes.filter(c=>c.type==='Offline').length} icon="map-pin" color="emerald" />
+                        <StatCard label="Lớp Online" value={classes.filter(c=>c.type==='Online').length} icon="video" color="amber" />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                            <h3 className="font-bold mb-4 flex items-center gap-2 text-slate-700">
+                                <Icon name="alert-triangle" className="text-amber-500" /> Giám sát sĩ số (Theo quy định)
+                            </h3>
+                            <div className="space-y-3">
+                                {classes.map(c => {
+                                    const isOffline = c.type === 'Offline';
+                                    const warning = isOffline 
+                                        ? (c.students > 30 ? 'Vượt quá 30HV! Cần tách lớp.' : c.students < 20 ? 'Dưới 20HV (Chờ đủ).' : '')
+                                        : (c.students < 10 ? 'Dưới 10HV (Không đủ mở).' : '');
+                                    
+                                    return (
+                                        <div key={c.id} className="flex justify-between items-center p-3 hover:bg-slate-50 rounded-xl border border-transparent hover:border-slate-100 transition-all">
+                                            <div>
+                                                <p className="text-sm font-bold text-slate-800">{c.name}</p>
+                                                <p className="text-xs text-slate-500 flex items-center gap-1">
+                                                    <span className={isOffline ? 'text-blue-600 font-bold' : 'text-emerald-600 font-bold'}>{c.type}</span> 
+                                                    • Sĩ số: {c.students}
+                                                </p>
+                                            </div>
+                                            {warning ? (
+                                                <span className="text-[10px] font-extrabold text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-md uppercase">{warning}</span>
+                                            ) : (
+                                                <span className="text-[10px] font-extrabold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md uppercase">Đạt chuẩn</span>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-6 rounded-2xl border shadow-sm">
+                             <h3 className="font-bold mb-4 flex items-center gap-2 text-slate-700">
+                                <Icon name="check-circle" className="text-blue-500" /> Trạng thái học phí mới
+                            </h3>
+                            <div className="space-y-3">
+                                {students.slice(0, 5).map(s => (
+                                    <div key={s.id} className="flex justify-between items-center p-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center font-bold text-xs">{s.name[0]}</div>
+                                            <div>
+                                                <p className="text-sm font-bold">{s.name}</p>
+                                                <p className="text-[10px] text-slate-400 font-mono">{s.id}</p>
+                                            </div>
+                                        </div>
+                                        {s.paid ? <Icon name="check" size={16} className="text-emerald-500" /> : <Icon name="clock" size={16} className="text-amber-500" />}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function StudentDashboard({ student, classes }) {
+            const myClass = classes.find(c => c.id === student.classId);
+            return (
+                <div className="max-w-4xl mx-auto space-y-6 animate-in slide-in-from-bottom duration-500">
+                    <div className="bg-white rounded-3xl border shadow-sm p-8 flex flex-col md:flex-row items-center gap-8">
+                        <div className="w-32 h-32 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-xl rotate-3">
+                            <Icon name="user" size={64} />
+                        </div>
+                        <div className="flex-1 text-center md:text-left">
+                            <h2 className="text-3xl font-bold text-slate-800">{student.name}</h2>
+                            <p className="text-blue-600 font-mono font-bold tracking-widest">{student.id}</p>
+                            <div className="flex flex-wrap gap-4 mt-4 justify-center md:justify-start">
+                                <div className="bg-slate-50 px-4 py-2 rounded-xl border">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Trình độ đầu vào</p>
+                                    <p className="font-bold text-lg">{student.levelResult}</p>
+                                </div>
+                                <div className="bg-slate-50 px-4 py-2 rounded-xl border">
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase">Trạng thái phí</p>
+                                    <p className={`font-bold text-lg ${student.paid ? 'text-emerald-600' : 'text-amber-600'}`}>{student.paid ? 'Đã hoàn tất' : 'Chờ đóng'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="md:col-span-2 bg-white rounded-3xl border shadow-sm overflow-hidden">
+                            <div className="bg-slate-900 p-4 text-white font-bold flex items-center gap-2">
+                                <Icon name="calendar" size={18} /> Thông tin lớp học của tôi
+                            </div>
+                            {myClass ? (
+                                <div className="p-8 space-y-6">
+                                    <div>
+                                        <h4 className="text-2xl font-extrabold text-blue-600">{myClass.name}</h4>
+                                        <p className="text-slate-400 text-sm italic">Mã lớp: {myClass.id} • {myClass.type}</p>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-6">
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-slate-400 uppercase">Lịch học</p>
+                                            <p className="font-semibold text-slate-700">{myClass.schedule}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-xs font-bold text-slate-400 uppercase">Phòng học / Link</p>
+                                            <p className="font-semibold text-slate-700">{myClass.room}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-blue-50 p-4 rounded-2xl flex items-center gap-4 border border-blue-100">
+                                        <Icon name="info" className="text-blue-600" />
+                                        <p className="text-sm text-blue-700">Bạn đã đủ điều kiện tham gia lớp học. Vui lòng có mặt đúng giờ hoặc truy cập link sớm 5 phút.</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="p-20 text-center text-slate-400">
+                                    <Icon name="search-x" size={48} className="mx-auto mb-4 opacity-20" />
+                                    Hồ sơ đang được văn phòng duyệt và xếp lớp.
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-white rounded-3xl border shadow-sm p-6 space-y-4">
+                            <h3 className="font-bold text-slate-800 border-b pb-2">Liên hệ nhanh</h3>
+                            <button className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-blue-50 transition-colors group">
+                                <Icon name="phone" size={18} className="text-slate-400 group-hover:text-blue-600" />
+                                <div className="text-left">
+                                    <p className="text-xs font-bold text-slate-700">Hotline Đào tạo</p>
+                                    <p className="text-xs text-slate-400">028.1234.5678</p>
+                                </div>
+                            </button>
+                            <button className="w-full flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-blue-50 transition-colors group">
+                                <Icon name="mail" size={18} className="text-slate-400 group-hover:text-blue-600" />
+                                <div className="text-left">
+                                    <p className="text-xs font-bold text-slate-700">Gửi hỗ trợ</p>
+                                    <p className="text-xs text-slate-400">support@edu.vn</p>
+                                </div>
+                            </button>
+                            <div className="pt-4 mt-4 border-t text-center">
+                                <p className="text-[10px] text-slate-300 italic">Mọi thắc mắc về lịch học, học viên vui lòng liên hệ văn phòng trước 24h.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function StatCard({ label, value, icon, color }) {
+            const colors = {
+                blue: 'bg-blue-50 text-blue-600 border-blue-100',
+                indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+                emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                amber: 'bg-amber-50 text-amber-600 border-amber-100',
+            };
+            return (
+                <div className={`p-5 rounded-2xl border shadow-sm ${colors[color]}`}>
+                    <div className="flex justify-between items-start mb-2">
+                        <Icon name={icon} size={16} className="opacity-60" />
+                    </div>
+                    <p className="text-2xl font-extrabold">{value}</p>
+                    <p className="text-[10px] font-bold uppercase opacity-60 tracking-wider">{label}</p>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
